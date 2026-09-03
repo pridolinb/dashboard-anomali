@@ -54,29 +54,53 @@ def load_data(sheet_name):
     df = pd.read_excel('monitoring pengerjaan anomali.xlsx', sheet_name=sheet_name, header=1)
     return df
 
+@st.cache_data
+def load_all_data(sheet_names_list):
+    all_dfs = []
+    for sheet in sheet_names_list:
+        df = pd.read_excel('monitoring pengerjaan anomali.xlsx', sheet_name=sheet, header=1)
+        if 'jumlah_baris_anomali' in df.columns and 'jumlah_sudah' in df.columns and 'kab' in df.columns:
+            all_dfs.append(df[['kab', 'jumlah_baris_anomali', 'jumlah_sudah']])
+    
+    if all_dfs:
+        combined_df = pd.concat(all_dfs)
+        summary_df = combined_df.groupby('kab', as_index=False).sum()
+        summary_df['persentase_penyelesaian'] = (summary_df['jumlah_sudah'] / summary_df['jumlah_baris_anomali']) * 100
+        summary_df['persentase_penyelesaian'] = summary_df['persentase_penyelesaian'].fillna(0)
+        return summary_df
+    return pd.DataFrame()
+
 try:
     sheet_names = get_sheet_names()
+    
+    # Tambahkan opsi "Semua Anomali" di urutan pertama
+    options = ["Semua Anomali"] + sheet_names
     
     # Menambahkan pilihan Anomali dengan nama yang lebih deskriptif
     selected_sheet = st.selectbox(
         "🔍 Pilih Anomali:", 
-        options=sheet_names, 
+        options=options, 
         index=0,
-        format_func=lambda x: f"{x.capitalize()}: {ANOMALI_LABELS.get(x, x)}"
+        format_func=lambda x: "Total Anomali" if x == "Semua Anomali" else f"{x.capitalize()}: {ANOMALI_LABELS.get(x, x)}"
     )
     
-    df = load_data(selected_sheet)
+    if selected_sheet == "Semua Anomali":
+        df = load_all_data(sheet_names)
+    else:
+        df = load_data(selected_sheet)
     
     # Menampilkan metrik utama
     if 'jumlah_baris_anomali' in df.columns and 'jumlah_sudah' in df.columns:
         total_anomali = df['jumlah_baris_anomali'].sum()
         total_selesai = df['jumlah_sudah'].sum()
+        sisa_pekerjaan = total_anomali - total_selesai
         persentase_total = (total_selesai / total_anomali * 100) if total_anomali > 0 else 0
         
-        col1, col2, col3 = st.columns(3)
-        col1.metric("🔴 Total Baris Anomali", f"{total_anomali:,}")
-        col2.metric("✅ Total Sudah Dikerjakan", f"{total_selesai:,}")
-        col3.metric("🎯 Persentase Penyelesaian", f"{persentase_total:.2f}%")
+        col1, col2, col3, col4 = st.columns(4)
+        col1.metric("🔴 Total Anomali", f"{total_anomali:,}")
+        col2.metric("✅ Total Selesai", f"{total_selesai:,}")
+        col3.metric("⏳ Sisa Pekerjaan", f"{sisa_pekerjaan:,}")
+        col4.metric("🎯 Persentase Penyelesaian", f"{persentase_total:.2f}%")
         
         st.markdown("<hr style='border: 1px solid #ddd;'>", unsafe_allow_html=True)
         
@@ -91,13 +115,14 @@ try:
                 fig.update_traces(texttemplate='%{text:.2f}%', textposition='outside')
                 fig.update_layout(uniformtext_minsize=8, uniformtext_mode='hide', xaxis_tickangle=-45, 
                                   showlegend=False, plot_bgcolor='rgba(0,0,0,0)', height=500)
+                fig.update_yaxes(range=[0, 100])  # Mengunci sumbu Y dari 0 hingga 100
                 st.plotly_chart(fig, use_container_width=True)
             except Exception as e:
                 st.bar_chart(df.set_index('kab')['persentase_penyelesaian'])
         else:
             st.warning("Data persentase penyelesaian tidak tersedia di sheet ini.")
     else:
-        st.error(f"Format kolom pada {selected_sheet} tidak sesuai (butuh 'jumlah_baris_anomali' & 'jumlah_sudah').")
+        st.error(f"Format kolom pada data ini tidak sesuai (butuh 'jumlah_baris_anomali' & 'jumlah_sudah').")
 
 except Exception as e:
     st.error(f"Gagal memuat data: {e}")
