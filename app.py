@@ -102,22 +102,5 @@ try:
                 st.warning("Data persentase penyelesaian tidak tersedia di sheet ini.")
                 
         with col_chart2:
-            st.markdown("<h3 style='color: #2E86C1; text-align: center;'>⚖️ Jumlah Anomali vs Selesai</h3>", unsafe_allow_html=True)
-            try:
-                df_melted = df.melt(id_vars=['kab'], value_vars=['jumlah_baris_anomali', 'jumlah_sudah'],
-                                    var_name='Status', value_name='Jumlah')
-                df_melted['Status'] = df_melted['Status'].replace({'jumlah_baris_anomali': 'Total Anomali', 'jumlah_sudah': 'Sudah Selesai'})
-                
-                fig2 = px.bar(df_melted, x='kab', y='Jumlah', color='Status', barmode='group',
-                              labels={'kab': 'Kabupaten'},
-                              color_discrete_map={'Total Anomali': '#FF6961', 'Sudah Selesai': '#77DD77'})
-                fig2.update_layout(xaxis_tickangle=-45, plot_bgcolor='rgba(0,0,0,0)', height=500,
-                                   legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1))
-                st.plotly_chart(fig2, use_container_width=True)
-            except:
-                st.bar_chart(df.set_index('kab')[['jumlah_baris_anomali', 'jumlah_sudah']])
-    else:
-        st.error(f"Format kolom pada {selected_sheet} tidak sesuai (butuh 'jumlah_baris_anomali' & 'jumlah_sudah').")
-
 except Exception as e:
     st.error(f"Gagal memuat data: {e}")
