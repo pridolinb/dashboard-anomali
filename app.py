@@ -115,7 +115,7 @@ try:
         col_chart, col_table = st.columns([3, 2])
         
         with col_chart:
-            st.markdown("<h3 style='color: #2E86C1; text-align: center;'>📈 Progress Penyelesaian per Kab (%)</h3>", unsafe_allow_html=True)
+            st.markdown("<h3 style='color: #2E86C1; text-align: center;'>📈 Progres Penyelesaian per Kab (%)</h3>", unsafe_allow_html=True)
             if 'persentase_penyelesaian' in df.columns and 'kab' in df.columns:
                 try:
                     fig = px.bar(df, x='kab', y='persentase_penyelesaian', 
@@ -124,7 +124,7 @@ try:
                                  color='kab',
                                  color_discrete_sequence=px.colors.qualitative.Pastel)
                     fig.update_traces(texttemplate='%{text:.2f}%', textposition='outside')
-                    fig.update_layout(uniformtext_minsize=8, uniformtext_mode='hide', xaxis_tickangle=-45, 
+                    fig.update_layout(uniformtext_minsize=8, uniformtext_mode='hide', xaxis_tickangle=0, 
                                       showlegend=False, plot_bgcolor='rgba(0,0,0,0)', height=500)
                     fig.update_yaxes(range=[0, 100])  # Mengunci sumbu Y dari 0 hingga 100
                     st.plotly_chart(fig, use_container_width=True)
