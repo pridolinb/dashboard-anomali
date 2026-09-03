@@ -104,23 +104,50 @@ try:
         
         st.markdown("<hr style='border: 1px solid #ddd;'>", unsafe_allow_html=True)
         
-        st.markdown("<h3 style='color: #2E86C1; text-align: center;'>📈 Progress Penyelesaian per Kab (%)</h3>", unsafe_allow_html=True)
-        if 'persentase_penyelesaian' in df.columns and 'kab' in df.columns:
-            try:
-                fig = px.bar(df, x='kab', y='persentase_penyelesaian', 
-                             text='persentase_penyelesaian',
-                             labels={'kab': 'Kabupaten', 'persentase_penyelesaian': 'Persentase (%)'},
-                             color='kab',
-                             color_discrete_sequence=px.colors.qualitative.Pastel)
-                fig.update_traces(texttemplate='%{text:.2f}%', textposition='outside')
-                fig.update_layout(uniformtext_minsize=8, uniformtext_mode='hide', xaxis_tickangle=-45, 
-                                  showlegend=False, plot_bgcolor='rgba(0,0,0,0)', height=500)
-                fig.update_yaxes(range=[0, 100])  # Mengunci sumbu Y dari 0 hingga 100
-                st.plotly_chart(fig, use_container_width=True)
-            except Exception as e:
-                st.bar_chart(df.set_index('kab')['persentase_penyelesaian'])
-        else:
-            st.warning("Data persentase penyelesaian tidak tersedia di sheet ini.")
+        # Layout 2 kolom: Kiri untuk grafik (3 bagian), Kanan untuk tabel (2 bagian)
+        col_chart, col_table = st.columns([3, 2])
+        
+        with col_chart:
+            st.markdown("<h3 style='color: #2E86C1; text-align: center;'>📈 Progress Penyelesaian per Kab (%)</h3>", unsafe_allow_html=True)
+            if 'persentase_penyelesaian' in df.columns and 'kab' in df.columns:
+                try:
+                    fig = px.bar(df, x='kab', y='persentase_penyelesaian', 
+                                 text='persentase_penyelesaian',
+                                 labels={'kab': 'Kabupaten', 'persentase_penyelesaian': 'Persentase (%)'},
+                                 color='kab',
+                                 color_discrete_sequence=px.colors.qualitative.Pastel)
+                    fig.update_traces(texttemplate='%{text:.2f}%', textposition='outside')
+                    fig.update_layout(uniformtext_minsize=8, uniformtext_mode='hide', xaxis_tickangle=-45, 
+                                      showlegend=False, plot_bgcolor='rgba(0,0,0,0)', height=500)
+                    fig.update_yaxes(range=[0, 100])  # Mengunci sumbu Y dari 0 hingga 100
+                    st.plotly_chart(fig, use_container_width=True)
+                except Exception as e:
+                    st.bar_chart(df.set_index('kab')['persentase_penyelesaian'])
+            else:
+                st.warning("Data persentase penyelesaian tidak tersedia di sheet ini.")
+                
+        with col_table:
+            st.markdown("<h3 style='color: #2E86C1; text-align: center;'>📋 Tabel Data</h3>", unsafe_allow_html=True)
+            if 'kab' in df.columns and 'jumlah_baris_anomali' in df.columns and 'jumlah_sudah' in df.columns:
+                # Mengambil kolom yang relevan dan mengganti namanya agar rapi
+                df_tabel = df[['kab', 'jumlah_baris_anomali', 'jumlah_sudah']].copy()
+                df_tabel.columns = ['Kabupaten', 'Jumlah Anomali', 'Jumlah Selesai']
+                
+                # Urutkan dari anomali terbanyak
+                df_tabel = df_tabel.sort_values('Jumlah Anomali', ascending=False)
+                
+                # Mengatur style tabel: text rata tengah dan warna solid per kolom
+                styler = df_tabel.style.set_properties(**{'text-align': 'center'}) \
+                                       .set_properties(subset=['Jumlah Anomali'], **{'background-color': '#ffcccc'}) \
+                                       .set_properties(subset=['Jumlah Selesai'], **{'background-color': '#ccffcc'})
+                
+                # Menambahkan spasi kosong agar letak tabel turun sejajar dengan garis horizontal grafik
+                st.markdown("<div style='margin-top: 100px;'></div>", unsafe_allow_html=True)
+                
+                # Menghilangkan argumen height agar tabel menyesuaikan ukuran 6 baris secara otomatis
+                st.dataframe(styler, use_container_width=True, hide_index=True)
+            else:
+                st.warning("Data tabel tidak tersedia.")
     else:
         st.error(f"Format kolom pada data ini tidak sesuai (butuh 'jumlah_baris_anomali' & 'jumlah_sudah').")
 
