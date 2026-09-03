@@ -88,6 +88,13 @@ try:
         df = load_all_data(sheet_names)
     else:
         df = load_data(selected_sheet)
+        
+    # Memastikan urutan spesifik untuk Kabupaten (berlaku untuk Diagram dan Tabel)
+    if 'kab' in df.columns:
+        urutan_kab = ['MAJENE', 'POLEWALI MANDAR', 'MAMASA', 'MAMUJU', 'PASANGKAYU', 'MAMUJU TENGAH']
+        df['kab'] = df['kab'].astype(str).str.upper()
+        df['kab'] = pd.Categorical(df['kab'], categories=urutan_kab, ordered=True)
+        df = df.sort_values('kab')
     
     # Menampilkan metrik utama
     if 'jumlah_baris_anomali' in df.columns and 'jumlah_sudah' in df.columns:
@@ -133,13 +140,8 @@ try:
                 df_tabel = df[['kab', 'jumlah_baris_anomali', 'jumlah_sudah']].copy()
                 df_tabel.columns = ['Kabupaten', 'Jumlah Anomali', 'Jumlah Selesai']
                 
-                # Urutkan dari anomali terbanyak
-                df_tabel = df_tabel.sort_values('Jumlah Anomali', ascending=False)
-                
-                # Mengatur style tabel: text rata tengah dan warna solid per kolom
-                styler = df_tabel.style.set_properties(**{'text-align': 'center'}) \
-                                       .set_properties(subset=['Jumlah Anomali'], **{'background-color': '#ffcccc'}) \
-                                       .set_properties(subset=['Jumlah Selesai'], **{'background-color': '#ccffcc'})
+                # Mengatur style tabel: text rata tengah untuk semua kolom
+                styler = df_tabel.style.set_properties(**{'text-align': 'center'})
                 
                 # Menambahkan spasi kosong agar letak tabel turun sejajar dengan garis horizontal grafik
                 st.markdown("<div style='margin-top: 100px;'></div>", unsafe_allow_html=True)
