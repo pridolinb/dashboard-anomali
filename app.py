@@ -80,27 +80,24 @@ try:
         
         st.markdown("<hr style='border: 1px solid #ddd;'>", unsafe_allow_html=True)
         
-        # Layout 2 kolom sejajar untuk grafik (menghapus tabel)
-        col_chart1, col_chart2 = st.columns(2)
-        
-        with col_chart1:
-            st.markdown("<h3 style='color: #2E86C1; text-align: center;'>📈 Progress Penyelesaian per Kab (%)</h3>", unsafe_allow_html=True)
-            if 'persentase_penyelesaian' in df.columns and 'kab' in df.columns:
-                try:
-                    fig = px.bar(df, x='kab', y='persentase_penyelesaian', 
-                                 text='persentase_penyelesaian',
-                                 labels={'kab': 'Kabupaten', 'persentase_penyelesaian': 'Persentase (%)'},
-                                 color='kab',
-                                 color_discrete_sequence=px.colors.qualitative.Pastel)
-                    fig.update_traces(texttemplate='%{text:.2f}%', textposition='outside')
-                    fig.update_layout(uniformtext_minsize=8, uniformtext_mode='hide', xaxis_tickangle=-45, 
-                                      showlegend=False, plot_bgcolor='rgba(0,0,0,0)', height=500)
-                    st.plotly_chart(fig, use_container_width=True)
-                except Exception as e:
-                    st.bar_chart(df.set_index('kab')['persentase_penyelesaian'])
-            else:
-                st.warning("Data persentase penyelesaian tidak tersedia di sheet ini.")
-                
-        with col_chart2:
+        st.markdown("<h3 style='color: #2E86C1; text-align: center;'>📈 Progress Penyelesaian per Kab (%)</h3>", unsafe_allow_html=True)
+        if 'persentase_penyelesaian' in df.columns and 'kab' in df.columns:
+            try:
+                fig = px.bar(df, x='kab', y='persentase_penyelesaian', 
+                             text='persentase_penyelesaian',
+                             labels={'kab': 'Kabupaten', 'persentase_penyelesaian': 'Persentase (%)'},
+                             color='kab',
+                             color_discrete_sequence=px.colors.qualitative.Pastel)
+                fig.update_traces(texttemplate='%{text:.2f}%', textposition='outside')
+                fig.update_layout(uniformtext_minsize=8, uniformtext_mode='hide', xaxis_tickangle=-45, 
+                                  showlegend=False, plot_bgcolor='rgba(0,0,0,0)', height=500)
+                st.plotly_chart(fig, use_container_width=True)
+            except Exception as e:
+                st.bar_chart(df.set_index('kab')['persentase_penyelesaian'])
+        else:
+            st.warning("Data persentase penyelesaian tidak tersedia di sheet ini.")
+    else:
+        st.error(f"Format kolom pada {selected_sheet} tidak sesuai (butuh 'jumlah_baris_anomali' & 'jumlah_sudah').")
+
 except Exception as e:
     st.error(f"Gagal memuat data: {e}")
