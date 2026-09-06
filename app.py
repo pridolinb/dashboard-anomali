@@ -47,6 +47,7 @@ ANOMALI_LABELS = {
     "anomali 11": "Usaha konstruksi dan penggalian tidak sesuai lokasi usaha",
     "anomali 12": "Keluarga memiliki lebih dari 1 ART disabilitas",
     "anomali 13": "Usaha pertanian tetapi jenis usaha bukan usaha pertanian",
+    "anomali 14": "Bermitra dengan KDKMP tapi bukan kategori \"G\" & \"F\"",
 }
 
 @st.cache_data
