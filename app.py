@@ -24,7 +24,7 @@ st.markdown("""
 
 # Judul Dashboard dengan warna
 st.markdown("<h1 style='text-align: center; color: #FF4B4B;'>📊 Dashboard Monitoring Pengerjaan Anomali</h1>", unsafe_allow_html=True)
-st.markdown("<p style='text-align: center; font-size: 18px; color: #555;'>Pilih anomali pada menu dropdown di bawah untuk melihat grafik progress penyelesaiannya.</p>", unsafe_allow_html=True)
+st.markdown("<p style='text-align: center; font-size: 18px; color: #555;'>Update Data 9 September.</p>", unsafe_allow_html=True)
 st.markdown("<br>", unsafe_allow_html=True)
 
 @st.cache_data
