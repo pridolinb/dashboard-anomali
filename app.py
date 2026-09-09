@@ -24,7 +24,7 @@ st.markdown("""
 
 # Judul Dashboard dengan warna
 st.markdown("<h1 style='text-align: center; color: #FF4B4B;'>📊 Dashboard Monitoring Pengerjaan Anomali</h1>", unsafe_allow_html=True)
-st.markdown("<p style='text-align: center; font-size: 18px; color: #555;'>Update Data 7 September.</p>", unsafe_allow_html=True)
+st.markdown("<p style='text-align: center; font-size: 18px; color: #555;'>Data 9 September</p>", unsafe_allow_html=True)
 st.markdown("<br>", unsafe_allow_html=True)
 
 @st.cache_data
@@ -62,31 +62,77 @@ def load_all_data(sheet_names_list):
         df = pd.read_excel('monitoring pengerjaan anomali.xlsx', sheet_name=sheet, header=1)
         if 'jumlah_baris_anomali' in df.columns and 'jumlah_sudah' in df.columns and 'kab' in df.columns:
             all_dfs.append(df[['kab', 'jumlah_baris_anomali', 'jumlah_sudah']])
+            
+    # Menambahkan data dari Anomali Pusat
+    try:
+        df_pusat = load_anomali_pusat()
+        if not df_pusat.empty and 'kab' in df_pusat.columns:
+            all_dfs.append(df_pusat[['kab', 'jumlah_baris_anomali', 'jumlah_sudah']])
+    except Exception as e:
+        pass # Abaikan jika gagal memuat anomali pusat untuk agregasi
     
     if all_dfs:
         combined_df = pd.concat(all_dfs)
+        # Samakan huruf kapital agar grouping akurat (misal 'Majene' dan 'MAJENE' tergabung)
+        combined_df['kab'] = combined_df['kab'].astype(str).str.upper()
+        
         summary_df = combined_df.groupby('kab', as_index=False).sum()
         summary_df['persentase_penyelesaian'] = (summary_df['jumlah_sudah'] / summary_df['jumlah_baris_anomali']) * 100
         summary_df['persentase_penyelesaian'] = summary_df['persentase_penyelesaian'].fillna(0)
         return summary_df
     return pd.DataFrame()
 
+@st.cache_data
+def load_anomali_pusat():
+    df = pd.read_excel('Tabel_Jumlah_Anomali_Ringkas.xlsx', header=2)
+    
+    # Memaksa kolom 'No' menjadi angka. Teks seperti 'Rumus:' akan berubah menjadi NaN
+    df['No'] = pd.to_numeric(df['No'], errors='coerce')
+    
+    # Hapus baris catatan/rumus di bagian bawah excel (serta baris 'Total' yang kolom No-nya kosong/NaN)
+    df = df.dropna(subset=['No'])
+    
+    # Mengonversi kolom ke tipe numerik dan mengganti nilai teks menjadi NaN lalu diubah jadi 0
+    df['Total Anomali'] = pd.to_numeric(df['Total Anomali'], errors='coerce').fillna(0)
+    df['Total Sudah Ditindaklanjuti'] = pd.to_numeric(df['Total Sudah Ditindaklanjuti'], errors='coerce').fillna(0)
+    
+    # Karena di file ringkas kolom persentase ditindaklanjuti berupa pecahan, kita kali 100
+    persen_sudah = pd.to_numeric(df['Total Sudah Ditindaklanjuti (%)'], errors='coerce').fillna(0) * 100
+    
+    # Menghitung Belum Ditindaklanjuti
+    belum_ditindaklanjuti = df['Total Anomali'] - df['Total Sudah Ditindaklanjuti']
+    
+    # Menghindari pembagian dengan nol menggunakan numpy.where atau masking pandas
+    persen_belum = (belum_ditindaklanjuti / df['Total Anomali'].replace({0: float('nan')})).fillna(0) * 100
+    
+    df_pusat = pd.DataFrame({
+        'No': df['No'].astype(int),  # Memastikan kolom No adalah angka (bukan teks)
+        'kab': df['Kabupaten'],
+        'jumlah_baris_anomali': df['Total Anomali'].astype(int),
+        'jumlah_sudah': df['Total Sudah Ditindaklanjuti'].astype(int),
+        'persentase_penyelesaian': persen_sudah,
+        'persentase_belum': persen_belum
+    })
+    return df_pusat
+
 try:
     sheet_names = get_sheet_names()
     
-    # Tambahkan opsi "Semua Anomali" di urutan pertama
-    options = ["Semua Anomali"] + sheet_names
+    # Tambahkan opsi "Semua Anomali" dan "Anomali Pusat" di urutan pertama
+    options = ["Semua Anomali", "Anomali Pusat"] + sheet_names
     
     # Menambahkan pilihan Anomali dengan nama yang lebih deskriptif
     selected_sheet = st.selectbox(
         "🔍 Pilih Anomali:", 
         options=options, 
         index=0,
-        format_func=lambda x: "Total Anomali" if x == "Semua Anomali" else f"{x.capitalize()}: {ANOMALI_LABELS.get(x, x)}"
+        format_func=lambda x: "Total Anomali" if x == "Semua Anomali" else ("Data Pusat: Anomali Pusat" if x == "Anomali Pusat" else f"{x.capitalize()}: {ANOMALI_LABELS.get(x, x)}")
     )
     
     if selected_sheet == "Semua Anomali":
         df = load_all_data(sheet_names)
+    elif selected_sheet == "Anomali Pusat":
+        df = load_anomali_pusat()
     else:
         df = load_data(selected_sheet)
         
@@ -122,8 +168,7 @@ try:
                     fig = px.bar(df, x='kab', y='persentase_penyelesaian', 
                                  text='persentase_penyelesaian',
                                  labels={'kab': 'Kabupaten', 'persentase_penyelesaian': 'Persentase (%)'},
-                                 color='kab',
-                                 color_discrete_sequence=px.colors.qualitative.Pastel)
+                                 color_discrete_sequence=['#FF9800'])
                     fig.update_traces(texttemplate='%{text:.2f}%', textposition='outside')
                     fig.update_layout(uniformtext_minsize=8, uniformtext_mode='hide', xaxis_tickangle=0, 
                                       showlegend=False, plot_bgcolor='rgba(0,0,0,0)', height=500)
@@ -136,7 +181,15 @@ try:
                 
         with col_table:
             st.markdown("<h3 style='color: #2E86C1; text-align: center;'>📋 Tabel Data</h3>", unsafe_allow_html=True)
-            if 'kab' in df.columns and 'jumlah_baris_anomali' in df.columns and 'jumlah_sudah' in df.columns:
+            if selected_sheet == "Anomali Pusat" and 'persentase_belum' in df.columns:
+                df_tabel = df[['kab', 'jumlah_baris_anomali', 'jumlah_sudah']].copy()
+                df_tabel.columns = ['Kabupaten', 'Total Anomali', 'Total Sudah Ditindaklanjuti']
+                
+                styler = df_tabel.style.set_properties(**{'text-align': 'center'})
+                st.markdown("<div style='margin-top: 100px;'></div>", unsafe_allow_html=True)
+                st.dataframe(styler, use_container_width=True, hide_index=True)
+                
+            elif 'kab' in df.columns and 'jumlah_baris_anomali' in df.columns and 'jumlah_sudah' in df.columns:
                 # Mengambil kolom yang relevan dan mengganti namanya agar rapi
                 df_tabel = df[['kab', 'jumlah_baris_anomali', 'jumlah_sudah']].copy()
                 df_tabel.columns = ['Kabupaten', 'Jumlah Anomali', 'Jumlah Selesai']
