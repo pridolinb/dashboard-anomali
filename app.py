@@ -96,8 +96,8 @@ def load_anomali_pusat():
     df['Total Anomali'] = pd.to_numeric(df['Total Anomali'], errors='coerce').fillna(0)
     df['Total Sudah Ditindaklanjuti'] = pd.to_numeric(df['Total Sudah Ditindaklanjuti'], errors='coerce').fillna(0)
     
-    # Karena di file ringkas kolom persentase ditindaklanjuti berupa pecahan, kita kali 100
-    persen_sudah = pd.to_numeric(df['Total Sudah Ditindaklanjuti (%)'], errors='coerce').fillna(0) * 100
+    # Menghitung Persentase Secara Dinamis
+    persen_sudah = (df['Total Sudah Ditindaklanjuti'] / df['Total Anomali'].replace({0: float('nan')})).fillna(0) * 100
     
     # Menghitung Belum Ditindaklanjuti
     belum_ditindaklanjuti = df['Total Anomali'] - df['Total Sudah Ditindaklanjuti']
@@ -182,8 +182,11 @@ try:
         with col_table:
             st.markdown("<h3 style='color: #2E86C1; text-align: center;'>📋 Tabel Data</h3>", unsafe_allow_html=True)
             if selected_sheet == "Anomali Pusat" and 'persentase_belum' in df.columns:
-                df_tabel = df[['kab', 'jumlah_baris_anomali', 'jumlah_sudah']].copy()
-                df_tabel.columns = ['Kabupaten', 'Total Anomali', 'Total Sudah Ditindaklanjuti']
+                df_tabel = df[['kab', 'jumlah_baris_anomali', 'jumlah_sudah', 'persentase_penyelesaian']].copy()
+                df_tabel.columns = ['Kabupaten', 'Total Anomali', 'Total Sudah Ditindaklanjuti', 'Total Sudah Ditindaklanjuti (%)']
+                
+                # Format persentase
+                df_tabel['Total Sudah Ditindaklanjuti (%)'] = df_tabel['Total Sudah Ditindaklanjuti (%)'].apply(lambda x: f"{x:.2f}%")
                 
                 styler = df_tabel.style.set_properties(**{'text-align': 'center'})
                 st.markdown("<div style='margin-top: 100px;'></div>", unsafe_allow_html=True)
