@@ -24,7 +24,7 @@ st.markdown("""
 
 # Judul Dashboard dengan warna
 st.markdown("<h1 style='text-align: center; color: #FF4B4B;'>📊 Dashboard Monitoring Pengerjaan Anomali</h1>", unsafe_allow_html=True)
-st.markdown("<p style='text-align: center; font-size: 18px; color: #555;'>Data 10 September</p>", unsafe_allow_html=True)
+st.markdown("<p style='text-align: center; font-size: 18px; color: #555;'>Data 9 September</p>", unsafe_allow_html=True)
 st.markdown("<br>", unsafe_allow_html=True)
 
 @st.cache_data
@@ -141,6 +141,7 @@ try:
         urutan_kab = ['MAJENE', 'POLEWALI MANDAR', 'MAMASA', 'MAMUJU', 'PASANGKAYU', 'MAMUJU TENGAH']
         df['kab'] = df['kab'].astype(str).str.upper()
         df['kab'] = pd.Categorical(df['kab'], categories=urutan_kab, ordered=True)
+        df = df.dropna(subset=['kab'])
         df = df.sort_values('kab')
     
     # Menampilkan metrik utama
@@ -188,27 +189,171 @@ try:
                 # Format persentase
                 df_tabel['Total Sudah Ditindaklanjuti (%)'] = df_tabel['Total Sudah Ditindaklanjuti (%)'].apply(lambda x: f"{x:.2f}%")
                 
-                styler = df_tabel.style.set_properties(**{'text-align': 'center'})
                 st.markdown("<div style='margin-top: 100px;'></div>", unsafe_allow_html=True)
-                st.dataframe(styler, use_container_width=True, hide_index=True)
+                st.dataframe(df_tabel, use_container_width=True, hide_index=True)
                 
             elif 'kab' in df.columns and 'jumlah_baris_anomali' in df.columns and 'jumlah_sudah' in df.columns:
                 # Mengambil kolom yang relevan dan mengganti namanya agar rapi
                 df_tabel = df[['kab', 'jumlah_baris_anomali', 'jumlah_sudah']].copy()
                 df_tabel.columns = ['Kabupaten', 'Jumlah Anomali', 'Jumlah Selesai']
                 
-                # Mengatur style tabel: text rata tengah untuk semua kolom
-                styler = df_tabel.style.set_properties(**{'text-align': 'center'})
-                
                 # Menambahkan spasi kosong agar letak tabel turun sejajar dengan garis horizontal grafik
                 st.markdown("<div style='margin-top: 100px;'></div>", unsafe_allow_html=True)
-                
-                # Menghilangkan argumen height agar tabel menyesuaikan ukuran 6 baris secara otomatis
-                st.dataframe(styler, use_container_width=True, hide_index=True)
+                st.dataframe(df_tabel, use_container_width=True, hide_index=True)
             else:
                 st.warning("Data tabel tidak tersedia.")
     else:
         st.error(f"Format kolom pada data ini tidak sesuai (butuh 'jumlah_baris_anomali' & 'jumlah_sudah').")
+        
+    # === BAGIAN KEDUA: ANALISIS DATA TAMBAHAN ===
+    st.markdown("<br><hr style='border: 2px solid #ddd;'><br>", unsafe_allow_html=True)
+    st.markdown("<h2 style='text-align: center; color: #FF4B4B;'>📊 Cakupan dan Koherensi Data</h2>", unsafe_allow_html=True)
+    
+    pilihan_kedua = [
+        "Jumlah Penduduk hasil SE vs Jumlah Penduduk Dukcapil",
+        "Jumlah hasil SE SPPG vs Kemenkes",
+        "Jumlah Perguruan Tinggi vs Data SKTNP",
+        "Jumlah Pendidikan Dasar",
+        "Jumlah Pendidikan Menengah Pertama",
+        "Jumlah Pendidikan Menengah Atas",
+        "Jumlah hasil SE Rumah Sakit vs Kemenkes",
+        "Jumlah Puskesmas",
+        "Jumlah Koperasi",
+        "Jumlah Hotel dan Penginapan",
+        "Jumlah Perusahaan Pertanian (perkebunan, perikanan, dll)",
+        "Jumlah Industri Besar dan Sedang",
+        "Jumlah industri Kontruksi pertambangan dan Penggalian",
+        "Jumlah Jasa Keuangan (Bank)",
+        "Jumlah Jasa Kesehatan (Praktek Dokter/Bidan dll)"
+    ]
+    
+    selected_pilihan_kedua = st.selectbox(
+        "🔍 Pilih Analisis Data:",
+        options=pilihan_kedua,
+        index=0
+    )
+    
+    urutan_kab_2 = ['MAJENE', 'POLEWALI MANDAR', 'MAMASA', 'MAMUJU', 'PASANGKAYU', 'MAMUJU TENGAH']
+    
+    if selected_pilihan_kedua == "Jumlah Penduduk hasil SE vs Jumlah Penduduk Dukcapil":
+        try:
+            df_pop = pd.read_excel('Perbandingan Jumlah Penduduk.xlsx', header=2)
+            # Ffill kabupaten to handle merged cells
+            df_pop['Kabupaten'] = df_pop['Kabupaten'].ffill()
+            
+            # Kolom yang diperlukan untuk dijumlahkan
+            cols_to_sum = ['Jumlah Penduduk Dukcapil', 'Jumlah Penduduk SE2026 Versi 2', 'Selisih\nVersi 2']
+            for col in cols_to_sum:
+                df_pop[col] = pd.to_numeric(df_pop[col], errors='coerce').fillna(0)
+                
+            df_grouped = df_pop.groupby('Kabupaten', as_index=False)[cols_to_sum].sum()
+            df_grouped['persentase_penyelesaian'] = 100 - ((df_grouped['Selisih\nVersi 2'].abs() / df_grouped['Jumlah Penduduk Dukcapil'].replace({0: float('nan')})).fillna(0) * 100)
+            
+            df_grouped['kab'] = df_grouped['Kabupaten'].astype(str).str.upper()
+            df_grouped['kab'] = pd.Categorical(df_grouped['kab'], categories=urutan_kab_2, ordered=True)
+            df_grouped = df_grouped.dropna(subset=['kab'])
+            df_grouped = df_grouped.sort_values('kab')
+            
+            df_kedua_chart = df_grouped[['kab', 'persentase_penyelesaian']].copy()
+            
+            df_tabel_2 = df_grouped[['kab', 'Jumlah Penduduk Dukcapil', 'Jumlah Penduduk SE2026 Versi 2', 'Selisih\nVersi 2']].copy()
+            # Menghapus kata 'Versi 2' dari nama tabel
+            df_tabel_2.columns = ['Kabupaten', 'Jumlah Penduduk Dukcapil', 'Jumlah Penduduk SE2026', 'Selisih']
+            
+            # Format integer untuk tabel
+            for col in ['Jumlah Penduduk Dukcapil', 'Jumlah Penduduk SE2026', 'Selisih']:
+                df_tabel_2[col] = df_tabel_2[col].astype(int)
+                
+        except Exception as e:
+            st.error("Gagal memuat data Penduduk: " + str(e))
+            df_kedua_chart = pd.DataFrame({'kab': pd.Categorical(urutan_kab_2, categories=urutan_kab_2, ordered=True), 'persentase_penyelesaian': [0.0]*6}).sort_values('kab')
+            df_tabel_2 = pd.DataFrame({'Kabupaten': urutan_kab_2, 'Data Kosong': [0]*6})
+            
+    elif selected_pilihan_kedua in ["Jumlah hasil SE SPPG vs Kemenkes", "Jumlah Perguruan Tinggi vs Data SKTNP", "Jumlah hasil SE Rumah Sakit vs Kemenkes"]:
+        try:
+            if selected_pilihan_kedua == "Jumlah hasil SE SPPG vs Kemenkes":
+                df_src = pd.read_excel('tabulasi SPPG, PT, dan Rumah sakit.xlsx', sheet_name='SPPG', header=0)
+                col_sumber = 'Kemenkes'
+            elif selected_pilihan_kedua == "Jumlah Perguruan Tinggi vs Data SKTNP":
+                df_src = pd.read_excel('tabulasi SPPG, PT, dan Rumah sakit.xlsx', sheet_name='Perguruan Tinggi', header=1)
+                col_sumber = 'SKTNP'
+            elif selected_pilihan_kedua == "Jumlah hasil SE Rumah Sakit vs Kemenkes":
+                df_src = pd.read_excel('tabulasi SPPG, PT, dan Rumah sakit.xlsx', sheet_name='Rumah sakit', header=1)
+                col_sumber = 'Kemenkes'
+
+            col_se = 'SE 2026'
+            col_selisih = 'Selisih'
+            tabel_headers = ['Kabupaten', f'Jumlah {col_sumber}', 'Jumlah SE 2026', 'Selisih']
+
+            # Bersihkan spasi kosong yang tidak sengaja terketik di nama kolom Excel (seperti ' SKTNP')
+            df_src.columns = df_src.columns.str.strip()
+            df_src['Kabupaten'] = df_src['Kabupaten'].ffill()
+            
+            for col in [col_sumber, col_se, col_selisih]:
+                df_src[col] = pd.to_numeric(df_src[col], errors='coerce').fillna(0)
+                
+            df_grouped = df_src.groupby('Kabupaten', as_index=False)[[col_sumber, col_se, col_selisih]].sum()
+            df_grouped['persentase_penyelesaian'] = 100 - ((df_grouped[col_selisih].abs() / df_grouped[col_sumber].replace({0: float('nan')})).fillna(0) * 100)
+            
+            # Ganti POLMAN menjadi POLEWALI MANDAR agar terbaca sistem
+            df_grouped['kab'] = df_grouped['Kabupaten'].astype(str).str.upper().replace('POLMAN', 'POLEWALI MANDAR')
+            df_grouped['kab'] = pd.Categorical(df_grouped['kab'], categories=urutan_kab_2, ordered=True)
+            df_grouped = df_grouped.dropna(subset=['kab'])
+            df_grouped = df_grouped.sort_values('kab')
+            
+            df_kedua_chart = df_grouped[['kab', 'persentase_penyelesaian']].copy()
+            df_tabel_2 = df_grouped[['kab', col_sumber, col_se, col_selisih]].copy()
+            df_tabel_2.columns = tabel_headers
+            
+            for col in tabel_headers[1:]:
+                df_tabel_2[col] = df_tabel_2[col].astype(int)
+                
+        except Exception as e:
+            st.error("Gagal memuat data: " + str(e))
+            df_kedua_chart = pd.DataFrame({'kab': pd.Categorical(urutan_kab_2, categories=urutan_kab_2, ordered=True), 'persentase_penyelesaian': [0.0]*6}).sort_values('kab')
+            df_tabel_2 = pd.DataFrame({'Kabupaten': urutan_kab_2, 'Data Kosong': [0]*6})
+            
+    else:
+        # Data kosong statis
+        df_kedua_chart = pd.DataFrame({
+            'kab': pd.Categorical(urutan_kab_2, categories=urutan_kab_2, ordered=True),
+            'persentase_penyelesaian': [0.0] * 6
+        }).sort_values('kab')
+        
+        df_tabel_2 = pd.DataFrame({
+            'Kabupaten': urutan_kab_2,
+            'Jumlah Anomali': [0] * 6,
+            'Jumlah Selesai': [0] * 6
+        })
+    
+    col_chart_2, col_table_2 = st.columns([3, 2])
+    
+    with col_chart_2:
+        st.markdown("<h3 style='color: #2E86C1; text-align: center;'>📈 Persentase (%)</h3>", unsafe_allow_html=True)
+        try:
+            fig2 = px.bar(df_kedua_chart, x='kab', y='persentase_penyelesaian', 
+                         text='persentase_penyelesaian',
+                         labels={'kab': 'Kabupaten', 'persentase_penyelesaian': 'Persentase (%)'},
+                         color_discrete_sequence=['#FF9800'])
+            fig2.update_traces(texttemplate='%{text:.2f}%', textposition='outside')
+            fig2.update_layout(uniformtext_minsize=8, uniformtext_mode='hide', xaxis_tickangle=0, 
+                              showlegend=False, plot_bgcolor='rgba(0,0,0,0)', height=500)
+            
+            # Ambil nilai max untuk sumbu y
+            max_val = df_kedua_chart['persentase_penyelesaian'].max()
+            if max_val < 100:
+                fig2.update_yaxes(range=[0, 100])
+            else:
+                fig2.update_yaxes(range=[0, max_val + 10])
+                
+            st.plotly_chart(fig2, use_container_width=True)
+        except Exception as e:
+            st.warning("Diagram tidak dapat ditampilkan.")
+            
+    with col_table_2:
+        st.markdown("<h3 style='color: #2E86C1; text-align: center;'>📋 Tabel Data</h3>", unsafe_allow_html=True)
+        st.markdown("<div style='margin-top: 100px;'></div>", unsafe_allow_html=True)
+        st.dataframe(df_tabel_2, use_container_width=True, hide_index=True)
 
 except Exception as e:
     st.error(f"Gagal memuat data: {e}")
