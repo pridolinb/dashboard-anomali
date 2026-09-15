@@ -247,7 +247,8 @@ try:
                 df_pop[col] = pd.to_numeric(df_pop[col], errors='coerce').fillna(0)
                 
             df_grouped = df_pop.groupby('Kabupaten', as_index=False)[cols_to_sum].sum()
-            df_grouped['persentase_penyelesaian'] = 100 - ((df_grouped['Selisih\nVersi 2'].abs() / df_grouped['Jumlah Penduduk Dukcapil'].replace({0: float('nan')})).fillna(0) * 100)
+            pct = (df_grouped['Jumlah Penduduk SE2026 Versi 2'] / df_grouped['Jumlah Penduduk Dukcapil'].replace({0: float('nan')})).fillna(0) * 100
+            df_grouped['persentase_penyelesaian'] = pct.clip(upper=100)
             
             df_grouped['kab'] = df_grouped['Kabupaten'].astype(str).str.upper()
             df_grouped['kab'] = pd.Categorical(df_grouped['kab'], categories=urutan_kab_2, ordered=True)
@@ -293,7 +294,8 @@ try:
                 df_src[col] = pd.to_numeric(df_src[col], errors='coerce').fillna(0)
                 
             df_grouped = df_src.groupby('Kabupaten', as_index=False)[[col_sumber, col_se, col_selisih]].sum()
-            df_grouped['persentase_penyelesaian'] = 100 - ((df_grouped[col_selisih].abs() / df_grouped[col_sumber].replace({0: float('nan')})).fillna(0) * 100)
+            pct = (df_grouped[col_se] / df_grouped[col_sumber].replace({0: float('nan')})).fillna(0) * 100
+            df_grouped['persentase_penyelesaian'] = pct.clip(upper=100)
             
             # Ganti POLMAN menjadi POLEWALI MANDAR agar terbaca sistem
             df_grouped['kab'] = df_grouped['Kabupaten'].astype(str).str.upper().replace('POLMAN', 'POLEWALI MANDAR')
