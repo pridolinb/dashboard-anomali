@@ -24,7 +24,7 @@ st.markdown("""
 
 # Judul Dashboard dengan warna
 st.markdown("<h1 style='text-align: center; color: #FF4B4B;'>📊 Dashboard Monitoring Pengerjaan Anomali</h1>", unsafe_allow_html=True)
-st.markdown("<p style='text-align: center; font-size: 18px; color: #555;'>Data 15 September</p>", unsafe_allow_html=True)
+st.markdown("<p style='text-align: center; font-size: 18px; color: #555;'>Data 21 September</p>", unsafe_allow_html=True)
 st.markdown("<br>", unsafe_allow_html=True)
 
 @st.cache_data
@@ -152,9 +152,9 @@ try:
         persentase_total = (total_selesai / total_anomali * 100) if total_anomali > 0 else 0
         
         col1, col2, col3, col4 = st.columns(4)
-        col1.metric("🔴 Total Anomali", f"{total_anomali:,}")
-        col2.metric("✅ Total Selesai", f"{total_selesai:,}")
-        col3.metric("⏳ Sisa Pekerjaan", f"{sisa_pekerjaan:,}")
+        col1.metric("🔴 Total Anomali", f"{int(total_anomali):,}")
+        col2.metric("✅ Total Selesai", f"{int(total_selesai):,}")
+        col3.metric("⏳ Sisa Pekerjaan", f"{int(sisa_pekerjaan):,}")
         col4.metric("🎯 Persentase Penyelesaian", f"{persentase_total:.2f}%")
         
         st.markdown("<hr style='border: 1px solid #ddd;'>", unsafe_allow_html=True)
