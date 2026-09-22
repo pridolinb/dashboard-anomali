@@ -56,20 +56,21 @@ def load_data(sheet_name):
     return df
 
 @st.cache_data
-def load_all_data(sheet_names_list):
+def load_all_data(sheet_names_list, include_pusat=True):
     all_dfs = []
     for sheet in sheet_names_list:
         df = pd.read_excel('monitoring pengerjaan anomali.xlsx', sheet_name=sheet, header=1)
         if 'jumlah_baris_anomali' in df.columns and 'jumlah_sudah' in df.columns and 'kab' in df.columns:
             all_dfs.append(df[['kab', 'jumlah_baris_anomali', 'jumlah_sudah']])
             
-    # Menambahkan data dari Anomali Pusat
-    try:
-        df_pusat = load_anomali_pusat()
-        if not df_pusat.empty and 'kab' in df_pusat.columns:
-            all_dfs.append(df_pusat[['kab', 'jumlah_baris_anomali', 'jumlah_sudah']])
-    except Exception as e:
-        pass # Abaikan jika gagal memuat anomali pusat untuk agregasi
+    if include_pusat:
+        # Menambahkan data dari Anomali Pusat
+        try:
+            df_pusat = load_anomali_pusat()
+            if not df_pusat.empty and 'kab' in df_pusat.columns:
+                all_dfs.append(df_pusat[['kab', 'jumlah_baris_anomali', 'jumlah_sudah']])
+        except Exception as e:
+            pass # Abaikan jika gagal memuat anomali pusat untuk agregasi
     
     if all_dfs:
         combined_df = pd.concat(all_dfs)
@@ -118,19 +119,21 @@ def load_anomali_pusat():
 try:
     sheet_names = get_sheet_names()
     
-    # Tambahkan opsi "Semua Anomali" dan "Anomali Pusat" di urutan pertama
-    options = ["Semua Anomali", "Anomali Pusat"] + sheet_names
+    # Tambahkan opsi "Semua Anomali", "Total Anomali Daerah", dan "Anomali Pusat" di urutan pertama
+    options = ["Semua Anomali", "Total Anomali Daerah", "Anomali Pusat"] + sheet_names
     
     # Menambahkan pilihan Anomali dengan nama yang lebih deskriptif
     selected_sheet = st.selectbox(
         "🔍 Pilih Anomali:", 
         options=options, 
         index=0,
-        format_func=lambda x: "Total Anomali" if x == "Semua Anomali" else ("Data Pusat: Anomali Pusat" if x == "Anomali Pusat" else f"{x.capitalize()}: {ANOMALI_LABELS.get(x, x)}")
+        format_func=lambda x: "Total Keseluruhan" if x == "Semua Anomali" else ("Total Anomali Daerah" if x == "Total Anomali Daerah" else ("Total Anomali Pusat" if x == "Anomali Pusat" else f"{x.capitalize()}: {ANOMALI_LABELS.get(x, x)}"))
     )
     
     if selected_sheet == "Semua Anomali":
-        df = load_all_data(sheet_names)
+        df = load_all_data(sheet_names, include_pusat=True)
+    elif selected_sheet == "Total Anomali Daerah":
+        df = load_all_data(sheet_names, include_pusat=False)
     elif selected_sheet == "Anomali Pusat":
         df = load_anomali_pusat()
     else:
