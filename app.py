@@ -127,7 +127,7 @@ try:
         "🔍 Pilih Anomali:", 
         options=options, 
         index=0,
-        format_func=lambda x: "Total Keseluruhan" if x == "Semua Anomali" else ("Total Anomali Daerah" if x == "Total Anomali Daerah" else ("Total Anomali Pusat" if x == "Anomali Pusat" else f"{x.capitalize()}: {ANOMALI_LABELS.get(x, x)}"))
+        format_func=lambda x: "Total Anomali" if x == "Semua Anomali" else ("Total Anomali Daerah" if x == "Total Anomali Daerah" else ("Total Anomali Pusat" if x == "Anomali Pusat" else f"{x.capitalize()}: {ANOMALI_LABELS.get(x, x)}"))
     )
     
     if selected_sheet == "Semua Anomali":
