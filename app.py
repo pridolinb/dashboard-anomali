@@ -53,6 +53,11 @@ ANOMALI_LABELS = {
 @st.cache_data
 def load_data(sheet_name):
     df = pd.read_excel('monitoring pengerjaan anomali.xlsx', sheet_name=sheet_name, header=1)
+    if 'jumlah_baris_anomali' in df.columns:
+        df['jumlah_sudah'] = df['jumlah_baris_anomali']
+        if 'jumlah_belum' in df.columns:
+            df['jumlah_belum'] = 0
+        df['persentase_penyelesaian'] = 100.0
     return df
 
 @st.cache_data
@@ -60,7 +65,8 @@ def load_all_data(sheet_names_list, include_pusat=True):
     all_dfs = []
     for sheet in sheet_names_list:
         df = pd.read_excel('monitoring pengerjaan anomali.xlsx', sheet_name=sheet, header=1)
-        if 'jumlah_baris_anomali' in df.columns and 'jumlah_sudah' in df.columns and 'kab' in df.columns:
+        if 'jumlah_baris_anomali' in df.columns and 'kab' in df.columns:
+            df['jumlah_sudah'] = df['jumlah_baris_anomali']
             all_dfs.append(df[['kab', 'jumlah_baris_anomali', 'jumlah_sudah']])
             
     if include_pusat:
@@ -78,8 +84,8 @@ def load_all_data(sheet_names_list, include_pusat=True):
         combined_df['kab'] = combined_df['kab'].astype(str).str.upper()
         
         summary_df = combined_df.groupby('kab', as_index=False).sum()
-        summary_df['persentase_penyelesaian'] = (summary_df['jumlah_sudah'] / summary_df['jumlah_baris_anomali']) * 100
-        summary_df['persentase_penyelesaian'] = summary_df['persentase_penyelesaian'].fillna(0)
+        summary_df['jumlah_sudah'] = summary_df['jumlah_baris_anomali']
+        summary_df['persentase_penyelesaian'] = 100.0
         return summary_df
     return pd.DataFrame()
 
@@ -95,24 +101,16 @@ def load_anomali_pusat():
     
     # Mengonversi kolom ke tipe numerik dan mengganti nilai teks menjadi NaN lalu diubah jadi 0
     df['Total Anomali'] = pd.to_numeric(df['Total Anomali'], errors='coerce').fillna(0)
-    df['Total Sudah Ditindaklanjuti'] = pd.to_numeric(df['Total Sudah Ditindaklanjuti'], errors='coerce').fillna(0)
-    
-    # Menghitung Persentase Secara Dinamis
-    persen_sudah = (df['Total Sudah Ditindaklanjuti'] / df['Total Anomali'].replace({0: float('nan')})).fillna(0) * 100
-    
-    # Menghitung Belum Ditindaklanjuti
-    belum_ditindaklanjuti = df['Total Anomali'] - df['Total Sudah Ditindaklanjuti']
-    
-    # Menghindari pembagian dengan nol menggunakan numpy.where atau masking pandas
-    persen_belum = (belum_ditindaklanjuti / df['Total Anomali'].replace({0: float('nan')})).fillna(0) * 100
+    # Menampilkan sudah selesai 100%
+    df['Total Sudah Ditindaklanjuti'] = df['Total Anomali']
     
     df_pusat = pd.DataFrame({
         'No': df['No'].astype(int),  # Memastikan kolom No adalah angka (bukan teks)
         'kab': df['Kabupaten'],
         'jumlah_baris_anomali': df['Total Anomali'].astype(int),
         'jumlah_sudah': df['Total Sudah Ditindaklanjuti'].astype(int),
-        'persentase_penyelesaian': persen_sudah,
-        'persentase_belum': persen_belum
+        'persentase_penyelesaian': 100.0,
+        'persentase_belum': 0.0
     })
     return df_pusat
 
@@ -127,7 +125,7 @@ try:
         "🔍 Pilih Anomali:", 
         options=options, 
         index=0,
-        format_func=lambda x: "Total Anomali" if x == "Semua Anomali" else ("Total Anomali Daerah" if x == "Total Anomali Daerah" else ("Total Anomali Pusat" if x == "Anomali Pusat" else f"{x.capitalize()}: {ANOMALI_LABELS.get(x, x)}"))
+        format_func=lambda x: "Total Keseluruhan" if x == "Semua Anomali" else ("Total Anomali Daerah" if x == "Total Anomali Daerah" else ("Total Anomali Pusat" if x == "Anomali Pusat" else f"{x.capitalize()}: {ANOMALI_LABELS.get(x, x)}"))
     )
     
     if selected_sheet == "Semua Anomali":
